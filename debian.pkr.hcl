@@ -25,12 +25,12 @@ EOF
 
 variable "ssh_password" {
   type    = string
-  default = "debian"
+  default = "r00tme"
 }
 
 variable "ssh_username" {
   type    = string
-  default = "debian"
+  default = "root"
 }
 
 
@@ -70,7 +70,7 @@ source qemu "debian" {
   ssh_username     = "${var.ssh_username}"
   ssh_timeout      = "20m"
 
-  shutdown_command = "sudo systemctl poweroff"
+  shutdown_command = "systemctl poweroff"
 
   # Builds a compact image
   disk_compression   = true
@@ -87,7 +87,7 @@ source qemu "debian" {
     "<down><tab>", # non-graphical install
     "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
     "language=en country=US keymap=us ",
-    "hostname=debian domain=packer.local ", # Should be overriden after DHCP, if available
+    "hostname=debian domain=localdomain", # Should be overriden after DHCP, if available
     "<enter><wait>",
   ]
 }
