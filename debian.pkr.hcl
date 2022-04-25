@@ -23,14 +23,29 @@ EOF
   default = "https://cdimage.debian.org/cdimage/release/11.3.0/amd64/iso-cd/debian-11.3.0-amd64-netinst.iso"
 }
 
-variable "ssh_password" {
+variable "password" {
   type    = string
-  default = "r00tme"
+  default = "9toE!r00tme"
 }
 
-variable "ssh_username" {
+variable "hostname" {
   type    = string
-  default = "root"
+  default = "debian"
+}
+
+variable "domain" {
+  type    = string
+  default = "localdomain"
+}
+
+variable "cpus" {
+  type    = number
+  default = 1
+}
+
+variable "vnc_bind_address" {
+  type    = string
+  default = "127.0.0.1"
 }
 
 
@@ -41,53 +56,45 @@ It contains a few basic tools and can be use as a "cloud image" alternative.
 EOF
 
   sources = ["source.qemu.debian"]
+
+  provisioner "shell" {
+    inline = [
+      "echo 'root:${var.password}' | chpasswd"
+    ]
+  }
 }
 
 
 source qemu "debian" {
-  iso_url      = "${var.source_iso}"
-  iso_checksum = "${var.source_checksum_url}"
+  iso_url      = var.source_iso
+  iso_checksum = var.source_checksum_url
 
-  cpus = 1
-  # The Debian installer warns with a dialog box if there's not enough memory
-  # in the system.
+  cpus        = var.cpus
   memory      = 1024
   disk_size   = "16G"
   accelerator = "kvm"
 
-  headless = true
+  headless         = true
+  http_directory   = "http"
+  vnc_bind_address = var.vnc_bind_address
 
-  # Serve the `http` directory via HTTP, used for preseeding the Debian installer.
-  http_directory = "http"
-  http_port_min  = 9990
-  http_port_max  = 9999
-
-  # SSH ports to redirect to the VM being built
-  host_port_min = 2222
-  host_port_max = 2229
-  # This user is configured in the preseed file.
-  ssh_password     = "${var.ssh_password}"
-  ssh_username     = "${var.ssh_username}"
-  ssh_timeout      = "20m"
+  ssh_username = "root"
+  ssh_password = "r00tme"
+  ssh_timeout  = "20m"
 
   shutdown_command = "systemctl poweroff"
-
-  # Builds a compact image
-  disk_compression   = true
-  disk_discard       = "unmap"
-  skip_compaction    = false
-  disk_detect_zeroes = "unmap"
+  skip_compaction  = true
 
   format           = "qcow2"
-  output_directory = "${var.output_dir}"
-  vm_name          = "${var.output_name}"
+  output_directory = var.output_dir
+  vm_name          = var.output_name
 
   boot_wait = "5s"
   boot_command = [
-    "<down><tab>", # non-graphical install
+    "<down><tab>",
     "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
     "language=en country=US keymap=us ",
-    "hostname=debian domain=localdomain", # Should be overriden after DHCP, if available
-    "<enter><wait>",
+    "hostname=${var.hostname} domain=${var.domain}",
+    "<enter><wait>"
   ]
 }
