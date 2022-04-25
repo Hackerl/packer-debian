@@ -1,3 +1,18 @@
+variable "iso_url" {
+  description = <<EOF
+* Current images in https://cdimage.debian.org/cdimage/release/
+* Previous versions are in https://cdimage.debian.org/cdimage/archive/
+EOF
+
+  type    = string
+  default = "https://cdimage.debian.org/cdimage/release/11.3.0/amd64/iso-cd/debian-11.3.0-amd64-netinst.iso"
+}
+
+variable "iso_checksum" {
+  type    = string
+  default = "file:https://cdimage.debian.org/cdimage/release/11.3.0/amd64/iso-cd/SHA256SUMS"
+}
+
 variable "output_dir" {
   type    = string
   default = "output"
@@ -6,21 +21,6 @@ variable "output_dir" {
 variable "output_name" {
   type    = string
   default = "debian.qcow2"
-}
-
-variable "source_checksum_url" {
-  type    = string
-  default = "file:https://cdimage.debian.org/cdimage/release/11.3.0/amd64/iso-cd/SHA256SUMS"
-}
-
-variable "source_iso" {
-  description = <<EOF
-* Current images in https://cdimage.debian.org/cdimage/release/
-* Previous versions are in https://cdimage.debian.org/cdimage/archive/
-EOF
-
-  type    = string
-  default = "https://cdimage.debian.org/cdimage/release/11.3.0/amd64/iso-cd/debian-11.3.0-amd64-netinst.iso"
 }
 
 variable "password" {
@@ -62,12 +62,23 @@ EOF
       "echo 'root:${var.password}' | chpasswd"
     ]
   }
+
+  post-processor "shell-local" {
+    inline = [
+      "virt-sparsify --in-place ${var.output_dir}/${var.output_name}"
+    ]
+  }
+
+  post-processor "checksum" {
+    checksum_types = ["sha256"]
+    output         = "${var.output_dir}/${var.output_name}.{{.ChecksumType}}"
+  }
 }
 
 
 source qemu "debian" {
-  iso_url      = var.source_iso
-  iso_checksum = var.source_checksum_url
+  iso_url      = var.iso_url
+  iso_checksum = var.iso_checksum
 
   cpus        = var.cpus
   memory      = 1024
